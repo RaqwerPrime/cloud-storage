@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      connection-test-query: SELECT 1
+
+logging:
+  level:
+    root: INFO
+  file:
+    name: /app/logs/application.log

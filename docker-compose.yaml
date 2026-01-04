@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15.5-alpine
+    container_name: cloud-postgres
+    environment:
+      POSTGRES_DB: cloud_storage
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cloud_storage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cloud-storage:
+    build: .
+    container_name: cloud-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloud_storage
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: 12345678901234567890123456789012
+      CLOUD_STORAGE_PATH: /app/storage/files
+    volumes:
+      - ./storage:/app/storage/files
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
