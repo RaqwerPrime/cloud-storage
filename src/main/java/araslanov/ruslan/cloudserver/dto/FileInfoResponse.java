@@ -4,7 +4,6 @@ public class FileInfoResponse {
     private String filename;
     private Long size;
 
-    // Конструкторы
     public FileInfoResponse() {}
 
     public FileInfoResponse(String filename, Long size) {
@@ -12,7 +11,6 @@ public class FileInfoResponse {
         this.size = size;
     }
 
-    // Геттеры и сеттеры
     public String getFilename() {
         return filename;
     }

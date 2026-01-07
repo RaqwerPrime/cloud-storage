@@ -3,6 +3,7 @@ package araslanov.ruslan.cloudserver.service;
 import araslanov.ruslan.cloudserver.entity.User;
 import araslanov.ruslan.cloudserver.entity.UserFile;
 import araslanov.ruslan.cloudserver.repository.UserFileRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class FileStorageService {
 
     private String storagePath;

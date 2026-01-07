@@ -4,7 +4,6 @@ public class ErrorResponse {
     private String message;
     private Integer id;
 
-    // Конструкторы
     public ErrorResponse() {}
 
     public ErrorResponse(String message, Integer id) {
@@ -12,7 +11,6 @@ public class ErrorResponse {
         this.id = id;
     }
 
-    // Геттеры и сеттеры
     public String getMessage() {
         return message;
     }

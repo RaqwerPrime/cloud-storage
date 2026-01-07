@@ -20,8 +20,3 @@ CREATE INDEX IF NOT EXISTS idx_user_files_user_id ON user_files(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_files_filename ON user_files(filename);
 CREATE INDEX IF NOT EXISTS idx_users_login ON users(login);
 
--- Создание тестового пользователя
--- Пароль: "test" (зашифрован через BCrypt)
-INSERT INTO users (login, password)
-VALUES ('test@mail.ru', '$2a$10$N9qo8uLOickgx2ZMRZoMye0rN5KJ1pW6LQJYfJ7RlZ7QbK1VYzWXe')
-ON CONFLICT (login) DO NOTHING;
