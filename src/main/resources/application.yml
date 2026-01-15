@@ -33,7 +33,7 @@ cloud:
       secret: "12345678901234567890123456789012"
       expiration: 86400000
   storage:
-    path: "./storage/files"
+    path: "./storage"
 
 server:
   port: 8080

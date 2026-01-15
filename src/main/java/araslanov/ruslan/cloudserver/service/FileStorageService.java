@@ -7,6 +7,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,31 +20,45 @@ import java.util.UUID;
 @Transactional
 public class FileStorageService {
 
-    private String storagePath;
-
+    private final String baseStoragePath;
     private final UserFileRepository fileRepository;
 
     public FileStorageService(
-            @Value("${cloud.storage.path}") String storagePath,
+            @Value("${cloud.storage.path}") String baseStoragePath,
             UserFileRepository fileRepository) {
-        this.storagePath = storagePath;
+        this.baseStoragePath = baseStoragePath;
         this.fileRepository = fileRepository;
         createStorageDirectory();
     }
 
     private void createStorageDirectory() {
         try {
-            Path path = Paths.get(storagePath);
+            Path path = Paths.get(baseStoragePath);
             if (!Files.exists(path)) {
                 Files.createDirectories(path);
-                System.out.println("Storage directory created: " + storagePath);
+                System.out.println("Base storage directory created: " + baseStoragePath);
             }
         } catch (IOException e) {
             throw new RuntimeException("Could not create storage directory", e);
         }
     }
 
+    private Path getUserStoragePath(User user) {
+        // Используем userId для создания уникальной папки
+        String userFolderName = "user_" + user.getId();
+        return Paths.get(baseStoragePath).resolve(userFolderName);
+    }
+
+    private void createUserDirectoryIfNotExists(User user) throws IOException {
+        Path userPath = getUserStoragePath(user);
+        if (!Files.exists(userPath)) {
+            Files.createDirectories(userPath);
+        }
+    }
+
     public void uploadFile(User user, String filename, MultipartFile file) throws IOException {
+        validateFilename(filename);
+
         if (fileRepository.existsByUserAndFilename(user, filename)) {
             throw new IllegalArgumentException("File already exists: " + filename);
         }
@@ -52,15 +67,18 @@ public class FileStorageService {
             throw new IllegalArgumentException("File is empty");
         }
 
+        createUserDirectoryIfNotExists(user);
+
         String uniqueFilename = UUID.randomUUID().toString();
-        Path targetLocation = Paths.get(storagePath).resolve(uniqueFilename);
+        Path userStoragePath = getUserStoragePath(user);
+        Path targetLocation = userStoragePath.resolve(uniqueFilename);
 
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
         UserFile userFile = new UserFile();
         userFile.setUser(user);
-        userFile.setFilename(filename);
-        userFile.setFilePath(targetLocation.toString());
+        userFile.setFilename(filename); // Оригинальное имя
+        userFile.setFilePath(targetLocation.toString()); // Полный путь на диске
         userFile.setSize(file.getSize());
 
         fileRepository.save(userFile);
@@ -86,9 +104,13 @@ public class FileStorageService {
         Files.deleteIfExists(filePath);
 
         fileRepository.delete(userFile);
+
+        cleanupUserDirectory(user);
     }
 
     public void renameFile(User user, String oldFilename, String newFilename) {
+        validateFilename(newFilename);
+
         UserFile userFile = fileRepository.findByUserAndFilename(user, oldFilename)
                 .orElseThrow(() -> new IllegalArgumentException("File not found: " + oldFilename));
 
@@ -110,4 +132,34 @@ public class FileStorageService {
 
         return files;
     }
+
+    private void validateFilename(String filename) {
+        if (filename == null || filename.trim().isEmpty()) {
+            throw new IllegalArgumentException("Filename cannot be empty");
+        }
+
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new IllegalArgumentException("Invalid filename: " + filename);
+        }
+
+        if (filename.length() > 255) {
+            throw new IllegalArgumentException("Filename too long");
+        }
+    }
+
+    private void cleanupUserDirectory(User user) {
+        try {
+            Path userPath = getUserStoragePath(user);
+            if (Files.exists(userPath)) {
+                try (var files = Files.list(userPath)) {
+                    if (files.findAny().isEmpty()) {
+                        Files.deleteIfExists(userPath);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Could not cleanup user directory: " + e.getMessage());
+        }
+    }
+
 }
